@@ -21,11 +21,11 @@ junit - тестирование
 Отредактируйте его, указав свои параметры подключения к БД.
 Если подключение к БД с новыми параметрами произойдет корректно, то запустится сервер.
 API доступно по ссылкам:
-http://localhost:8080/getBalance?id=ID
+ - http://localhost:8080/getBalance?id=ID
 возращает значение текущего баланса, где ID - id пользователя
-http://localhost:8080/putMoney?id=ID&amount=AMOUNT
+ - http://localhost:8080/putMoney?id=ID&amount=AMOUNT
 увеличивает баланс пользователя с id ID, на значение AMOUNT
-http://localhost:8080/takeMoney?id=ID&amount=AMOUNT
+ - http://localhost:8080/takeMoney?id=ID&amount=AMOUNT
 уменьшает баланс пользователя с id ID, на значение AMOUNT, если у него достаточно средств
 
 Юнит тесты тоже требуют редактирования файла settings.xml, сгенерируемого при первом запуске тестов. Базу под десты можно не создавать, она будет создана автоматически до тестов, и удалена после. 
