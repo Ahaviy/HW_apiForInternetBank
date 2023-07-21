@@ -100,4 +100,14 @@ public class Operations {
         }
     }
 
+    public void testHistory (int id, BigDecimal amount, int type) {
+        try (Connection connection = DriverManager.getConnection(settings.getUrl() + settings.getDatabaseName(),
+                settings.getLogin(), settings.getPassword())) {
+            String command ="INSERT INTO public.history_of_operation (balance_id, operation_type, amount)";
+
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
 }
