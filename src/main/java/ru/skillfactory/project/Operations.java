@@ -7,7 +7,13 @@ import java.math.BigDecimal;
 import java.sql.*;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.GregorianCalendar;
 import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class Operations {
 
@@ -62,6 +68,10 @@ public class Operations {
             Statement statement = connection.createStatement();
             String command = "update public.balance set amount= " + decimalFormat.format(currentAmount) + " where id=" + id;
             statement.execute(command);
+            command = "INSERT INTO public.history_of_operation (balance_id, operation_type, amount) VALUES" +
+                    "(" + id + ", 2, " + decimalFormat.format(amount) + ");";
+            statement.execute(command);
+            statement.close();
             return new OperationResult(BigDecimal.valueOf(1),"");
         } catch (SQLException e) {
             log.error("произошла ошибка при работе с БД");
@@ -92,12 +102,33 @@ public class Operations {
             Statement statement = connection.createStatement();
             String command = "update public.balance set amount= " + decimalFormat.format(currentAmount) + " where id=" + id;
             statement.execute(command);
+            command = "INSERT INTO public.history_of_operation (balance_id, operation_type, amount) VALUES" +
+                    "(" + id + ", 1, " + decimalFormat.format(amount) + ");";
+            statement.execute(command);
+            statement.close();
             return new OperationResult(BigDecimal.valueOf(1),"");
         } catch (SQLException e) {
             log.error("произошла ошибка при работе с БД");
             log.error(e.getMessage());
             return new OperationResult(BigDecimal.valueOf(-1), "database error");
         }
+    }
+
+/*    public ArrayList<String> getOperationList(int id, String start, String stop) {
+        //Проверка корректность данных
+        //Выполнение запроса
+    }*/
+
+    private boolean isDateTimeValid(String date) {
+        String pattern = "yyyy-MM-dd";
+        Calendar calendar = new GregorianCalendar();
+        calendar.setLenient(false);
+        try {
+            SimpleDateFormat dateFormat = new SimpleDateFormat(pattern);
+            calendar.setTime(dateFormat.parse(date));
+            if (dateFormat.format(calendar.getTime()).equals(date)) return true;
+        } catch (Exception e) {}
+        return false;
     }
 
     public void testHistory (int id, BigDecimal amount, int type) {

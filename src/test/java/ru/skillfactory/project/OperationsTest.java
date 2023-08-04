@@ -47,10 +47,10 @@ class OperationsTest {
 
     @AfterAll
     static void tearDown() {
-        if (isDBWasCreated) {
+        /*if (isDBWasCreated) {
             deleteDB();
             log.info("созданая ранее БД для теста была удалена");
-        }
+        }*/
     }
 
     @Test
@@ -78,6 +78,7 @@ class OperationsTest {
         assertEquals(0, BigDecimal.valueOf(1).compareTo(operations.takeMoney(3, value1).getResult()));
         assertEquals(0, BigDecimal.valueOf(0).compareTo(operations.takeMoney(4, value2).getResult()));
         assertEquals(0, value3.compareTo(operations.getBalance(3).getResult()));
+        // проверка
         assertEquals(0, BigDecimal.valueOf(-1).compareTo(fakeOperations.takeMoney(3, value1).getResult()));
         assertEquals(0, BigDecimal.valueOf(-1).compareTo(operations.takeMoney(3, value4).getResult()));
         assertEquals(0, BigDecimal.valueOf(-1).compareTo(operations.takeMoney(235, value1).getResult()));
@@ -92,6 +93,7 @@ class OperationsTest {
         BigDecimal value3 = BigDecimal.valueOf(-20);
         assertEquals(0, BigDecimal.valueOf(1).compareTo(operations.putMoney(5, value1).getResult()));
         assertEquals(0, value2.compareTo(operations.getBalance(5).getResult()));
+        //проверка
         assertEquals(0, BigDecimal.valueOf(-1).compareTo(operations.putMoney(5, value3).getResult()));
         assertEquals(0, BigDecimal.valueOf(-1).compareTo(fakeOperations.putMoney(5, value1).getResult()));
         assertEquals(0, BigDecimal.valueOf(-1).compareTo(operations.putMoney(500, value1).getResult()));
@@ -171,15 +173,36 @@ class OperationsTest {
         }
         try (Connection connection = DriverManager.getConnection(settings.getUrl() + settings.getDatabaseName(),
                 settings.getLogin(), settings.getPassword())) {
+            Statement statement = connection.createStatement();
             String command = "CREATE TABLE public.balance\n" +
                     "(\n" +
-                    "    id integer NOT NULL,\n" +
-                    "    amount numeric(14, 2),\n" +
-                    "    PRIMARY KEY (id)\n" +
+                    "\tid SERIAL PRIMARY KEY,\n" +
+                    "\tamount numeric(14, 2)\n" +
                     ");";
-            Statement statement = connection.createStatement();
             statement.execute(command);
-            statement.close();
+            command = "CREATE TABLE public.operation_type\n" +
+                    "(\n" +
+                    "\tid SERIAL PRIMARY KEY,\n" +
+                    "\toperation_name VARCHAR(10) NOT NULL\n" +
+                    ");";
+            statement.execute(command);
+            command = "CREATE TABLE public.history_of_operation\n" +
+                    "(\n" +
+                    "\tid SERIAL PRIMARY KEY,\n" +
+                    "\tbalance_id integer NOT NULL,\n" +
+                    "\toperation_type integer NOT NULL,\n" +
+                    "\tamount numeric(14, 2) NOT NULL,\n" +
+                    "\tdatetime TIMESTAMPTZ DEFAULT NOW(),\n" +
+                    "\tCONSTRAINT type_id FOREIGN KEY (operation_type)\n" +
+                    "\t\tREFERENCES public.operation_type (id),\n" +
+                    "\tCONSTRAINT balance_id FOREIGN KEY (balance_id)\n" +
+                    "\tREFERENCES public.balance (id) \n" +
+                    ");";
+            statement.execute(command);
+            command = "insert into public.operation_type (operation_name) values\n" +
+                    "\t('put'),\n" +
+                    "\t('withdraw')";
+            statement.execute(command);
             command = "INSERT INTO public.balance (id, amount) VALUES\n" +
                     "(1, 8500000000),\n" +
                     "(2, 1000000320.58),\n" +
@@ -187,7 +210,6 @@ class OperationsTest {
                     "(4, 1185.34),\n" +
                     "(5, 150),\n" +
                     "(6, 342.43);";
-            statement = connection.createStatement();
             statement.execute(command);
             statement.close();
             log.info("БД успешно создана");
@@ -195,8 +217,6 @@ class OperationsTest {
             log.error("произошла ошибка при работе с БД");
             log.error(e.getMessage());
         }
-
-
     }
 
     private static void deleteDB() {
