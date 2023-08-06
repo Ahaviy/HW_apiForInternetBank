@@ -50,7 +50,7 @@ public class Operations {
         OperationResult operationResult = getBalance(id);
         BigDecimal currentAmount = operationResult.getResult();
         if (currentAmount.compareTo(BigDecimal.valueOf(-1)) == 0) {
-            if(operationResult.errorMessage.startsWith("not found id")){
+            if (operationResult.errorMessage.startsWith("not found id")) {
                 return new OperationResult(BigDecimal.valueOf(-1), "not found id=" + id);
             }
             return new OperationResult(BigDecimal.valueOf(-1), "database error");
@@ -72,7 +72,7 @@ public class Operations {
                     "(" + id + ", 2, " + decimalFormat.format(amount) + ");";
             statement.execute(command);
             statement.close();
-            return new OperationResult(BigDecimal.valueOf(1),"");
+            return new OperationResult(BigDecimal.valueOf(1), "");
         } catch (SQLException e) {
             log.error("произошла ошибка при работе с БД");
             log.error(e.getMessage());
@@ -87,7 +87,7 @@ public class Operations {
         OperationResult operationResult = getBalance(id);
         BigDecimal currentAmount = operationResult.getResult();
         if (currentAmount.compareTo(BigDecimal.valueOf(-1)) == 0) {
-            if(operationResult.errorMessage.startsWith("not found id")){
+            if (operationResult.errorMessage.startsWith("not found id")) {
                 return new OperationResult(BigDecimal.valueOf(-1), "not found id=" + id);
             }
             return new OperationResult(BigDecimal.valueOf(-1), "database error");
@@ -106,7 +106,7 @@ public class Operations {
                     "(" + id + ", 1, " + decimalFormat.format(amount) + ");";
             statement.execute(command);
             statement.close();
-            return new OperationResult(BigDecimal.valueOf(1),"");
+            return new OperationResult(BigDecimal.valueOf(1), "");
         } catch (SQLException e) {
             log.error("произошла ошибка при работе с БД");
             log.error(e.getMessage());
@@ -114,31 +114,59 @@ public class Operations {
         }
     }
 
-/*    public ArrayList<String> getOperationList(int id, String start, String stop) {
-        //Проверка корректность данных
-        //Выполнение запроса
-    }*/
-
-    private boolean isDateTimeValid(String date) {
-        String pattern = "yyyy-MM-dd";
-        Calendar calendar = new GregorianCalendar();
-        calendar.setLenient(false);
-        try {
-            SimpleDateFormat dateFormat = new SimpleDateFormat(pattern);
-            calendar.setTime(dateFormat.parse(date));
-            if (dateFormat.format(calendar.getTime()).equals(date)) return true;
-        } catch (Exception e) {}
-        return false;
-    }
-
-    public void testHistory (int id, BigDecimal amount, int type) {
-        try (Connection connection = DriverManager.getConnection(settings.getUrl() + settings.getDatabaseName(),
-                settings.getLogin(), settings.getPassword())) {
-            String command ="INSERT INTO public.history_of_operation (balance_id, operation_type, amount)";
-
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
+    public OperationHistoryResult getOperationList(int id, String fromDate, String endDate) {
+        if (!isIdExists(id)) {
+            log.warn("не найден пользовательс с id = " + id);
+            return new OperationHistoryResult("not found id=" + id);
         }
+        String defaultFromDate = "2000-01-01";
+        if (fromDate.isEmpty()) fromDate = defaultFromDate;
+        if (endDate.isEmpty()) {
+            endDate = MyUtils.getDateTimeFromDate((new GregorianCalendar()).getTime()).substring(0, 10);
+        }
+        if (MyUtils.isDateTimeValid(fromDate) && MyUtils.isDateTimeValid(endDate)) {
+            try (Connection connection = DriverManager.getConnection(settings.getUrl() + settings.getDatabaseName(),
+                    settings.getLogin(), settings.getPassword())) {
+                Statement statement = connection.createStatement();
+                String command = "select datetime, operation_name, amount from public.history_of_operation join " +
+                        "public.operation_type on public.history_of_operation.operation_type = public.operation_type.id " +
+                        "where balance_id = " + id + " and datetime between '" + fromDate + "' and '" + endDate + "'";
+                statement.executeQuery(command);
+                //TODO: неокончено
+                OperationHistoryResult result = new OperationHistoryResult();
+
+                return result;
+
+
+            } catch (SQLException e) {
+                log.error("произошла ошибка при работе с БД");
+                log.error(e.getMessage());
+                return new OperationHistoryResult("database error");
+            }
+
+        } else {
+            log.warn("Не корректные параметры даты");
+            return new OperationHistoryResult("incorect parametr");
+        }
+
+
+        //Проверка корректность данных
+
+        //Выполнение запроса
     }
+
+    private boolean isIdExists(int id) {
+        OperationResult operationResult = getBalance(id);
+        BigDecimal currentAmount = operationResult.getResult();
+        if (currentAmount.compareTo(BigDecimal.valueOf(-1)) == 0) {
+            if (operationResult.errorMessage.startsWith("not found id")) {
+                return false;
+            }
+            return false;
+        }
+        return true;
+
+    }
+
 
 }

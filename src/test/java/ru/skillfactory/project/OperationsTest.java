@@ -16,6 +16,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class OperationsTest {
 
     private static Logger log = LogManager.getLogger(OperationsTest.class);
+
+    public static DataBaseCreator dbCreator;
     private static boolean isDBWasCreated;
 
     private static final String DEFAULT_IP = "localhost";
@@ -31,6 +33,8 @@ class OperationsTest {
 
     @BeforeAll
     static void setUp() {
+        dbCreator = new DataBaseCreator(SETTINGS_FILE_NAME);
+
         loadOrSetDefaultConnectionSettings();
         if (isValidConnection()) {
             if (isDatabaseExists()) {
@@ -47,10 +51,10 @@ class OperationsTest {
 
     @AfterAll
     static void tearDown() {
-        /*if (isDBWasCreated) {
-            deleteDB();
+        if (isDBWasCreated) {
+            dbCreator.deleteDB();
             log.info("созданая ранее БД для теста была удалена");
-        }*/
+        }
     }
 
     @Test
@@ -219,17 +223,7 @@ class OperationsTest {
         }
     }
 
-    private static void deleteDB() {
-        try (Connection connection = DriverManager.getConnection(settings.getUrl(), settings.getLogin(), settings.getPassword())) {
-            String command = "DROP DATABASE " + settings.getDatabaseName();
-            Statement statement = connection.createStatement();
-            statement.execute(command);
-            statement.close();
-        } catch (SQLException e) {
-            log.error("произошла ошибка при удалении БД");
-            log.error(e.getMessage());
-        }
-    }
+
 
 
 }

@@ -3,149 +3,70 @@ package ru.skillfactory;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import ru.skillfactory.project.ConnectionSettings;
+import ru.skillfactory.project.DataBaseCreator;
+import ru.skillfactory.project.MyUtils;
 
 import java.io.File;
+import java.math.BigDecimal;
 import java.sql.*;
+import java.util.Calendar;
+import java.util.GregorianCalendar;
 
 
 public class DemoBaseGenerator {
 
     private static Logger log = LogManager.getLogger(DemoBaseGenerator.class);
-
-    private static final String DEFAULT_IP = "localhost";
-    private static final String DEFAULT_PORT = "5432";
-    private static final String DEFAULT_LOGIN = "postgres";
-    private static final String DEFAULT_PASSWORD = "test";
-    private static final String DEFAULT_DATABASE_NAME = "projectbase";
-    private static final String SETTINGS_FILE_NAME = "./src/test/resources/settings.xml";
-
-    private static ConnectionSettings settings;
-
-    public static void main(String[] args) {
+    private DataBaseCreator dbCreator;
 
 
-        GenerateDemoDB();
+    private static final String SETTINGS_FILE_NAME = ".src/main/resources/settings.xml";
+    private static final int NUMBER_OF_USERS = 100;
+    private static final int NUMBER_OF_DAYS = 100;
+
+    public DemoBaseGenerator() {
+        dbCreator = new DataBaseCreator(SETTINGS_FILE_NAME);
     }
 
-    private static void GenerateDemoDB() {
-        loadOrSetDefaultConnectionSettings();
-        if (isValidConnection()) {
-            if (isDatabaseExists()) {
-                log.info("БД с именем: " + settings.getDatabaseName() + " уже создана. ");
+    private static Calendar date;
+
+    public static void main(String[] args) {
+        DemoBaseGenerator demoBaseGenerator = new DemoBaseGenerator();
+        demoBaseGenerator.GenerateDemoDB();
+    }
+
+    private void GenerateDemoDB() {
+
+        if (dbCreator.isValidConnection()) {
+            if (dbCreator.isDatabaseExists()) {
+                log.info("БД с именем: " + dbCreator.getSettings().getDatabaseName() + " уже создана. ");
             } else {
-                log.info("БД " + settings.getDatabaseName() + " не найдена, будет создана новая база");
-                createDB();
+                log.info("БД " + dbCreator.getSettings().getDatabaseName() + " не найдена, будет создана новая база");
+                dbCreator.createDB();
                 FillDB();
             }
         }
-
     }
 
-    private static void FillDB() {
-    }
-
-    private static void loadOrSetDefaultConnectionSettings() {
-        settings = new ConnectionSettings();
-        if ((new File(SETTINGS_FILE_NAME)).exists()) {
-            log.info("найден файл настроек соединения с БД: " + SETTINGS_FILE_NAME);
-            settings = ConnectionSettings.loadSettings(SETTINGS_FILE_NAME);
-        } else {
-            log.warn("файл с настройками соединения с БД не найден, взяты значения по умолчанию ");
-            settings.setIp(DEFAULT_IP);
-            settings.setPort(DEFAULT_PORT);
-            settings.setLogin(DEFAULT_LOGIN);
-            settings.setPassword(DEFAULT_PASSWORD);
-            settings.setDatabaseName(DEFAULT_DATABASE_NAME);
-            ConnectionSettings.saveSettings(SETTINGS_FILE_NAME, settings);
-            log.warn("настройки сохранены в " + SETTINGS_FILE_NAME + ", отредактируйте файл для корректной работы");
+    private void FillDB() {
+        for (int userId = 1; userId <= NUMBER_OF_USERS; userId++) {
+            dbCreator.addNewUserToDB();
         }
-    }
-
-    private static boolean isDatabaseExists() {
-        Boolean isExists = false;
-        try (Connection connection = DriverManager.getConnection(settings.getUrl(), settings.getLogin(), settings.getPassword())) {
-
-            Statement statement = connection.createStatement();
-            ResultSet result = statement.executeQuery("select datname from pg_database");
-
-            while (result.next()) {
-                if (result.getString(1).equals(settings.getDatabaseName())) {
-                    isExists = true;
-                    break;
+        date = new GregorianCalendar();
+        date.roll(Calendar.DAY_OF_YEAR, -(NUMBER_OF_DAYS + 1));
+        for (int day = 0; day < NUMBER_OF_DAYS; day++) {
+            for (int userId = 1; userId <= NUMBER_OF_USERS; userId++) {
+                int choice = (int) (Math.random() * 100);
+                if (choice > 90) {
+                    dbCreator.addNewHistoryEntry(userId, 1, BigDecimal.valueOf(300 + Math.random() * 900),
+                            MyUtils.generateDateTimeFromDate(date.getTime()));
+                } else {
+                    if (choice > 60) {
+                        dbCreator.addNewHistoryEntry(userId, 2, BigDecimal.valueOf(100 + Math.random() * 300),
+                                MyUtils.generateDateTimeFromDate(date.getTime()));
+                    }
                 }
             }
-            statement.close();
-        } catch (SQLException e) {
-            log.error("произошла ошибка при работе с БД");
-            log.error(e.getMessage());
-        }
-        return isExists;
-    }
-
-    private static boolean isValidConnection() {
-        boolean result = false;
-        try (Connection connection = DriverManager.getConnection(settings.getUrl(), settings.getLogin(), settings.getPassword())) {
-            if (connection != null) {
-                result = true;
-                log.info("соединение с БД успешно установлено");
-            }
-        } catch (SQLException e) {
-            log.error("ошибка соединения с БД");
-            log.error(e.getMessage());
-        }
-        return result;
-    }
-
-    private static void createDB() {
-        try (Connection connection = DriverManager.getConnection(settings.getUrl(), settings.getLogin(), settings.getPassword())) {
-            String command = "CREATE DATABASE " + settings.getDatabaseName() + " WITH OWNER = " + settings.getLogin()
-                    + " ENCODING = 'UTF8' CONNECTION LIMIT = -1 IS_TEMPLATE = False;";
-            Statement statement = connection.createStatement();
-            statement.execute(command);
-            statement.close();
-        } catch (SQLException e) {
-            log.error("произошла ошибка при работе с БД");
-            log.error(e.getMessage());
-        }
-        try (Connection connection = DriverManager.getConnection(settings.getUrl() + settings.getDatabaseName(),
-                settings.getLogin(), settings.getPassword())) {
-            Statement statement = connection.createStatement();
-            String command = "CREATE TABLE public.balance\n" +
-                    "(\n" +
-                    "\tid SERIAL PRIMARY KEY,\n" +
-                    "\tamount numeric(14, 2)\n" +
-                    ");";
-            statement.execute(command);
-            command = "CREATE TABLE public.operation_type\n" +
-                    "(\n" +
-                    "\tid SERIAL PRIMARY KEY,\n" +
-                    "\toperation_name VARCHAR(10) NOT NULL\n" +
-                    ");";
-            statement.execute(command);
-            command = "CREATE TABLE public.history_of_operation\n" +
-                    "(\n" +
-                    "\tid SERIAL PRIMARY KEY,\n" +
-                    "\tbalance_id integer NOT NULL,\n" +
-                    "\toperation_type integer NOT NULL,\n" +
-                    "\tamount numeric(14, 2) NOT NULL,\n" +
-                    "\tdatetime TIMESTAMPTZ DEFAULT NOW(),\n" +
-                    "\tCONSTRAINT type_id FOREIGN KEY (operation_type)\n" +
-                    "\t\tREFERENCES public.operation_type (id),\n" +
-                    "\tCONSTRAINT balance_id FOREIGN KEY (balance_id)\n" +
-                    "\tREFERENCES public.balance (id) \n" +
-                    ");";
-            statement.execute(command);
-            command = "insert into public.operation_type (operation_name) values\n" +
-                    "\t('put'),\n" +
-                    "\t('withdraw')";
-            statement.execute(command);
-            statement.close();
-            log.info("БД успешно создана");
-        } catch (SQLException e) {
-            log.error("произошла ошибка при работе с БД");
-            log.error(e.getMessage());
+            date.roll(Calendar.DAY_OF_YEAR, 1);
         }
     }
-
-    
 }
