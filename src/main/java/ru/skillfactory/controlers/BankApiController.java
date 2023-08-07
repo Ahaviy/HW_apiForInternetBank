@@ -41,6 +41,15 @@ public class BankApiController {
         return operations.getOperationList(id, fromDate, endDate);
     }
 
+    @RequestMapping("/transferMoney")
+    public OperationResult transferMoney(@RequestParam(value = "senderID", required = true) int senderID,
+                                         @RequestParam(value = "recipientID", required = true) int recipientID,
+                                         @RequestParam(value = "amount", required = true) BigDecimal amount) {
+        Operations operations = new Operations(App.getSettings());
+        return operations.transferMoney(senderID, recipientID, amount);
+
+    }
+
 
 
 }

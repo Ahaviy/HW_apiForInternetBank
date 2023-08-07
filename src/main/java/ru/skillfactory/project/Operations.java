@@ -59,17 +59,13 @@ public class Operations {
         if (currentAmount.compareTo(BigDecimal.valueOf(0)) < 0) {
             return new OperationResult(BigDecimal.valueOf(0), "");
         }
-        Locale locale = new Locale("en", "UK");
-        String pattern = "###.##";
-        DecimalFormat decimalFormat = (DecimalFormat) NumberFormat.getNumberInstance(locale);
-        decimalFormat.applyPattern(pattern);
         try (Connection connection = DriverManager.getConnection(settings.getUrl() + settings.getDatabaseName(),
                 settings.getLogin(), settings.getPassword())) {
             Statement statement = connection.createStatement();
-            String command = "update public.balance set amount= " + decimalFormat.format(currentAmount) + " where id=" + id;
+            String command = "update public.balance set amount= " + MyUtils.getStringFromBigDecimal(currentAmount) + " where id=" + id;
             statement.execute(command);
             command = "INSERT INTO public.history_of_operation (balance_id, operation_type, amount) VALUES" +
-                    "(" + id + ", 2, " + decimalFormat.format(amount) + ");";
+                    "(" + id + ", 2, " + MyUtils.getStringFromBigDecimal(amount) + ");";
             statement.execute(command);
             statement.close();
             return new OperationResult(BigDecimal.valueOf(1), "");
@@ -93,17 +89,13 @@ public class Operations {
             return new OperationResult(BigDecimal.valueOf(-1), "database error");
         }
         currentAmount = currentAmount.add(amount);
-        Locale locale = new Locale("en", "UK");
-        String pattern = "###.##";
-        DecimalFormat decimalFormat = (DecimalFormat) NumberFormat.getNumberInstance(locale);
-        decimalFormat.applyPattern(pattern);
         try (Connection connection = DriverManager.getConnection(settings.getUrl() + settings.getDatabaseName(),
                 settings.getLogin(), settings.getPassword())) {
             Statement statement = connection.createStatement();
-            String command = "update public.balance set amount= " + decimalFormat.format(currentAmount) + " where id=" + id;
+            String command = "update public.balance set amount= " + MyUtils.getStringFromBigDecimal(currentAmount)+ " where id=" + id;
             statement.execute(command);
             command = "INSERT INTO public.history_of_operation (balance_id, operation_type, amount) VALUES" +
-                    "(" + id + ", 1, " + decimalFormat.format(amount) + ");";
+                    "(" + id + ", 1, " + MyUtils.getStringFromBigDecimal(amount) + ");";
             statement.execute(command);
             statement.close();
             return new OperationResult(BigDecimal.valueOf(1), "");
@@ -158,6 +150,51 @@ public class Operations {
         //Проверка корректность данных
 
         //Выполнение запроса
+    }
+
+    public OperationResult transferMoney(int senderID, int recipientID, BigDecimal amount) {
+        if (amount.compareTo(BigDecimal.valueOf(0)) < 0) {
+            return new OperationResult(BigDecimal.valueOf(0), "incorrect amount");
+        }
+        if (!isIdExists(senderID)) {
+            return new OperationResult(BigDecimal.valueOf(0), "not found sender id");
+        }
+        if (!isIdExists(recipientID)) {
+            return new OperationResult(BigDecimal.valueOf(0), "not found recipient id");
+        }
+        if (senderID == recipientID) {
+            return new OperationResult(BigDecimal.valueOf(0), "senderID = recipientID");
+        }
+        OperationResult operationResult = getBalance(senderID);
+        BigDecimal currentAmount = operationResult.getResult();
+        if (currentAmount.compareTo(amount) < 0 ) {
+            return new OperationResult(BigDecimal.valueOf(0), "not enough sender balance");
+        }
+        BigDecimal senderCurrentAmount = currentAmount.subtract(amount);
+        operationResult = getBalance(recipientID);
+        BigDecimal recipienCurrentAmount = operationResult.getResult().add(amount);
+        try (Connection connection = DriverManager.getConnection(settings.getUrl() + settings.getDatabaseName(),
+                settings.getLogin(), settings.getPassword())) {
+            Statement statement = connection.createStatement();
+            String command = "update public.balance set amount= " + MyUtils.getStringFromBigDecimal(senderCurrentAmount) + " where id=" + senderID;
+            statement.execute(command);
+            command = "INSERT INTO public.history_of_operation (balance_id, operation_type, amount) VALUES" +
+                    "(" + senderID + ", 2, " + MyUtils.getStringFromBigDecimal(amount) + ");";
+            statement.execute(command);
+            command = "update public.balance set amount= " + MyUtils.getStringFromBigDecimal(recipienCurrentAmount) + " where id=" + recipientID;
+            statement.execute(command);
+            command = "INSERT INTO public.history_of_operation (balance_id, operation_type, amount) VALUES" +
+                    "(" + recipientID + ", 1, " + MyUtils.getStringFromBigDecimal(amount)+ ");";
+            statement.execute(command);
+            statement.close();
+            return new OperationResult(BigDecimal.valueOf(1), "");
+        } catch (SQLException e) {
+            log.error("произошла ошибка при работе с БД");
+            log.error(e.getMessage());
+            return new OperationResult(BigDecimal.valueOf(0), "database error");
+        }
+
+
     }
 
     private boolean isIdExists(int id) {

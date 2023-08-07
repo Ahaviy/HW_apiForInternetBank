@@ -83,13 +83,13 @@ class OperationsTest {
         assertEquals(0, BigDecimal.valueOf(-1).compareTo(operations.takeMoney(235, value1).getResult()));
         Calendar fromD = new GregorianCalendar();
         Calendar endD = new GregorianCalendar();
-        endD.roll(Calendar.DAY_OF_YEAR,1);
+        endD.roll(Calendar.DAY_OF_YEAR, 1);
         OperationHistoryResult result = operations.getOperationList(3, MyUtils.getDateTimeFromDate(fromD.getTime()),
                 MyUtils.getDateTimeFromDate(endD.getTime()));
-        assertEquals(result.getResult().toArray()[0].toString().substring(0,10),
-                MyUtils.getDateTimeFromDate(fromD.getTime()).substring(0,10));
-        assertEquals(result.getResult().toArray()[0].toString().substring(20,28), "withdraw");
-        assertEquals(result.getResult().toArray()[0].toString().substring(29,34),
+        assertEquals(result.getResult().toArray()[0].toString().substring(0, 10),
+                MyUtils.getDateTimeFromDate(fromD.getTime()).substring(0, 10));
+        assertEquals(result.getResult().toArray()[0].toString().substring(20, 28), "withdraw");
+        assertEquals(result.getResult().toArray()[0].toString().substring(29, 34),
                 MyUtils.getStringFromBigDecimal(value1));
     }
 
@@ -107,13 +107,13 @@ class OperationsTest {
         assertEquals(0, BigDecimal.valueOf(-1).compareTo(operations.putMoney(500, value1).getResult()));
         Calendar fromD = new GregorianCalendar();
         Calendar endD = new GregorianCalendar();
-        endD.roll(Calendar.DAY_OF_YEAR,1);
+        endD.roll(Calendar.DAY_OF_YEAR, 1);
         OperationHistoryResult result = operations.getOperationList(5, MyUtils.getDateTimeFromDate(fromD.getTime()),
                 MyUtils.getDateTimeFromDate(endD.getTime()));
-        assertEquals(result.getResult().toArray()[0].toString().substring(0,10),
-                MyUtils.getDateTimeFromDate(fromD.getTime()).substring(0,10));
-        assertEquals(result.getResult().toArray()[0].toString().substring(20,23), "put");
-        assertEquals(result.getResult().toArray()[0].toString().substring(24,29),
+        assertEquals(result.getResult().toArray()[0].toString().substring(0, 10),
+                MyUtils.getDateTimeFromDate(fromD.getTime()).substring(0, 10));
+        assertEquals(result.getResult().toArray()[0].toString().substring(20, 23), "put");
+        assertEquals(result.getResult().toArray()[0].toString().substring(24, 29),
                 MyUtils.getStringFromBigDecimal(value1));
     }
 
@@ -129,15 +129,46 @@ class OperationsTest {
         Operations operations = new Operations(dbCreator.getSettings());
         OperationHistoryResult result = operations.getOperationList(7, "2023-01-01", "2023-01-31");
         assertEquals(result.getResult().size(), 3);
-        assertEquals(result.getResult().toArray()[0].toString().substring(0,19), dates[0].substring(0,19));
-        assertEquals(result.getResult().toArray()[1].toString().substring(0,19), dates[2].substring(0,19));
-        assertEquals(result.getResult().toArray()[2].toString().substring(0,19), dates[3].substring(0,19));
-        assertEquals(result.getResult().toArray()[0].toString().substring(20,23), "put");
-        assertEquals(result.getResult().toArray()[1].toString().substring(20,23), "put");
-        assertEquals(result.getResult().toArray()[2].toString().substring(20,28), "withdraw");
+        assertEquals(result.getResult().toArray()[0].toString().substring(0, 19), dates[0].substring(0, 19));
+        assertEquals(result.getResult().toArray()[1].toString().substring(0, 19), dates[2].substring(0, 19));
+        assertEquals(result.getResult().toArray()[2].toString().substring(0, 19), dates[3].substring(0, 19));
+        assertEquals(result.getResult().toArray()[0].toString().substring(20, 23), "put");
+        assertEquals(result.getResult().toArray()[1].toString().substring(20, 23), "put");
+        assertEquals(result.getResult().toArray()[2].toString().substring(20, 28), "withdraw");
         assertEquals(result.getResult().toArray()[0].toString().substring(24), "100.00");
         assertEquals(result.getResult().toArray()[1].toString().substring(24), "300.00");
         assertEquals(result.getResult().toArray()[2].toString().substring(29), "400.00");
+    }
+
+    @Test
+    void transferMoney() {
+        Operations operations = new Operations(dbCreator.getSettings());
+        BigDecimal value1 = BigDecimal.valueOf(500);
+        BigDecimal value2 = operations.getBalance(9).getResult().subtract(value1);
+        BigDecimal value3 = operations.getBalance(10).getResult().add(value1);
+        Calendar fromD = new GregorianCalendar();
+        Calendar endD = new GregorianCalendar();
+        endD.roll(Calendar.DAY_OF_YEAR, 1);
+        assertEquals(operations.transferMoney(9, 10,
+                value1).getResult().compareTo(BigDecimal.valueOf(1)), 0);
+        assertEquals(operations.transferMoney(9, 10,
+                BigDecimal.valueOf(1000000000)).getResult().compareTo(BigDecimal.valueOf(0)), 0);
+        assertEquals(operations.getBalance(9).getResult().compareTo(value2), 0);
+        assertEquals(operations.getBalance(10).getResult().compareTo(value3), 0);
+        OperationHistoryResult result = operations.getOperationList(9, MyUtils.getDateTimeFromDate(fromD.getTime()),
+                MyUtils.getDateTimeFromDate(endD.getTime()));
+        assertEquals(result.getResult().toArray()[0].toString().substring(0, 10),
+                MyUtils.getDateTimeFromDate(fromD.getTime()).substring(0, 10));
+        assertEquals(result.getResult().toArray()[0].toString().substring(20, 28), "withdraw");
+        assertEquals(result.getResult().toArray()[0].toString().substring(29, 32),
+                MyUtils.getStringFromBigDecimal(value1));
+        result = operations.getOperationList(10, MyUtils.getDateTimeFromDate(fromD.getTime()),
+                MyUtils.getDateTimeFromDate(endD.getTime()));
+        assertEquals(result.getResult().toArray()[0].toString().substring(0, 10),
+                MyUtils.getDateTimeFromDate(fromD.getTime()).substring(0, 10));
+        assertEquals(result.getResult().toArray()[0].toString().substring(20, 23), "put");
+        assertEquals(result.getResult().toArray()[0].toString().substring(24, 27),
+                MyUtils.getStringFromBigDecimal(value1));
     }
 
     private static void generateFakeSettings() {
@@ -150,7 +181,7 @@ class OperationsTest {
     }
 
     private static void fillTestData() {
-        String[] balanceValues = {"8500000000", "1000000320.58", "1120", "1185.34", "150", "342.43", "20180", "10012.56"};
+        String[] balanceValues = {"8500000000", "1000000320.58", "1120", "1185.34", "150", "342.43", "20180", "10012.56", "2000", "300"};
         for (String balanceValue : balanceValues) {
             dbCreator.addNewUserToDB(balanceValue);
         }
