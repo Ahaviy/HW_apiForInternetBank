@@ -12,16 +12,17 @@ import java.sql.*;
 public class DataBaseCreator {
     private Logger log = LogManager.getLogger(DemoBaseGenerator.class);
     private String settingsFileName;
+    private  String databaseName;
     private final String DEFAULT_IP = "localhost";
     private final String DEFAULT_PORT = "5432";
     private final String DEFAULT_LOGIN = "postgres";
     private final String DEFAULT_PASSWORD = "test";
-    private final String DEFAULT_DATABASE_NAME = "projectbase";
     @Getter
     private ConnectionSettings settings;
 
-    public DataBaseCreator(String settingsFileName) {
+    public DataBaseCreator(String settingsFileName, String databaseName) {
         this.settingsFileName = settingsFileName;
+        this.databaseName = databaseName;
         loadOrSetDefaultConnectionSettings();
     }
 
@@ -36,7 +37,7 @@ public class DataBaseCreator {
             settings.setPort(DEFAULT_PORT);
             settings.setLogin(DEFAULT_LOGIN);
             settings.setPassword(DEFAULT_PASSWORD);
-            settings.setDatabaseName(DEFAULT_DATABASE_NAME);
+            settings.setDatabaseName(databaseName);
             ConnectionSettings.saveSettings(settingsFileName, settings);
             log.warn("настройки сохранены в " + settingsFileName + ", отредактируйте файл для корректной работы");
         }
@@ -128,8 +129,7 @@ public class DataBaseCreator {
         }
     }
 
-    public void addNewUserToDB() {
-        String balance = MyUtils.getStringFromBigDecimal(BigDecimal.valueOf(40000 + Math.random() * 10000));
+    public void addNewUserToDB(String balance) {
         try (Connection connection = DriverManager.getConnection(settings.getUrl() + settings.getDatabaseName(),
                 settings.getLogin(), settings.getPassword())) {
             Statement statement = connection.createStatement();
@@ -140,14 +140,18 @@ public class DataBaseCreator {
             log.warn(e.getMessage());
         }
     }
+    public void addNewUserToDB() {
+        String balance = MyUtils.getStringFromBigDecimal(BigDecimal.valueOf(40000 + Math.random() * 10000));
+        addNewUserToDB(balance);
+    }
+
 
     public void addNewHistoryEntry(int userId, int opetationType, BigDecimal amount, String datetime) {
         try (Connection connection = DriverManager.getConnection(settings.getUrl() + settings.getDatabaseName(),
                 settings.getLogin(), settings.getPassword())) {
             Statement statement = connection.createStatement();
             String command = "INSERT INTO public.history_of_operation (balance_id, operation_type, amount, datetime) VALUES" +
-                    "(" + userId + ", " + opetationType + ", " + MyUtils.getStringFromBigDecimal(amount) + ", " + datetime + ");";
-            System.out.println(command);
+                    "(" + userId + ", " + opetationType + ", " + MyUtils.getStringFromBigDecimal(amount) + ", '" + datetime + "');";
             statement.execute(command);
             statement.close();
         } catch (SQLException e) {

@@ -119,6 +119,8 @@ public class Operations {
             log.warn("не найден пользовательс с id = " + id);
             return new OperationHistoryResult("not found id=" + id);
         }
+        fromDate = fromDate.substring(0,10);
+        endDate = endDate.substring(0,10);
         String defaultFromDate = "2000-01-01";
         if (fromDate.isEmpty()) fromDate = defaultFromDate;
         if (endDate.isEmpty()) {
@@ -132,9 +134,12 @@ public class Operations {
                         "public.operation_type on public.history_of_operation.operation_type = public.operation_type.id " +
                         "where balance_id = " + id + " and datetime between '" + fromDate + "' and '" + endDate + "'";
                 statement.executeQuery(command);
-                //TODO: неокончено
+                ResultSet resultSet = statement.getResultSet();
                 OperationHistoryResult result = new OperationHistoryResult();
-
+                while (resultSet.next()) {
+                    result.getResult().add(resultSet.getString(1).substring(0,19) + " " + resultSet.getString(2) + " "
+                            + resultSet.getString(3));
+                }
                 return result;
 
 

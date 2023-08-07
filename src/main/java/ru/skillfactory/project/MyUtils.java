@@ -18,7 +18,7 @@ public class MyUtils {
     public static String getDateTimeFromDate(Date date) {
         String pattern = "yyyy-MM-dd HH:mm:ss";
         SimpleDateFormat dateFormat = new SimpleDateFormat(pattern);
-        return "'" + dateFormat.format(date) + ".000 +0300'";
+        return dateFormat.format(date) + ".000 +0300";
     }
 
     public static String generateDateTimeFromDate(Date date) {
